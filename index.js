@@ -1,6 +1,6 @@
 // require
 const express = require('express')
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors')
 require('dotenv').config()
 
@@ -78,9 +78,9 @@ async function run() {
 
                 const forumPostsData = await forumPostCollection.find().sort({ createdAt: -1 }).skip(skip).limit(limit).toArray()
 
-                res.status(201).send({
+                res.status(200).send({
                     success: true,
-                    message: 'forum post data fatched successfully',
+                    message: 'Latest forum posts fetched successfully',
                     totalPosts,
                     totalPage: Math.ceil(totalPosts / limit),
                     data: forumPostsData
@@ -89,17 +89,55 @@ async function run() {
             } catch (error) {
                 res.status(500).send({
                     success: false,
-                    message: 'forum post fetched failed',
+                    message: 'Community forum post fetched failed',
                     error: error.message
                 })
             }
         })
 
+        // NO: 03 [GET] Home top 3 latest forum post API
+        app.get('/api/latest-forum-posts', async (req, res) => {
+            try {
+                const result = await forumPostCollection.find().sort({ createdAt: -1 }).limit(3).toArray()
 
+                res.status(200).send({
+                    success: true,
+                    message: 'home page 3 latest forum post data fetched',
+                    data: result
+                })
 
+            } catch (error) {
 
+                console.error('Home page 3 latest post - Get api error', error)
 
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal server error',
+                })
+            }
+        })
 
+        // NO: 04 [GET] Single Forum Post Details Page (Private)
+        app.get('/api/forum-posts/:id', async (req, res) => {
+
+            try {
+                const id = req.params.id;
+
+                const result = await forumPostCollection.findOne({ _id: new ObjectId(id) })
+
+                res.status(200).send({
+                    success: true,
+                    message: "Single Forum Data successfully fetched",
+                    data: result
+                })
+            } catch (error) {
+                console.error('forum single posts api error', error)
+                res.status(500).send({
+                    success: false,
+                    message: error.message
+                })
+            }
+        })
 
 
 
