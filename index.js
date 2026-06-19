@@ -72,6 +72,9 @@ async function run() {
         })
 
 
+
+
+
         //**** Trainner DASHBOARD API Section ******//
 
         // Trainer Dashboard - OverView API
@@ -235,7 +238,7 @@ async function run() {
                     })
                 }
 
-                const result = await classesCollection.deleteOne({_id: new ObjectId(id)})
+                const result = await classesCollection.deleteOne({ _id: new ObjectId(id) })
 
                 res.status(200).send({
                     success: true,
@@ -253,10 +256,100 @@ async function run() {
             }
         })
 
+        // Trainer Dashboard - ALL Forum POST Collection API
+        app.get('/api/trainer/my-forum-posts/:email', async (req, res) => {
+            try {
+                const email = req.params.email;
+
+                const result = await forumPostCollection.find({ authorEmail: email }).toArray()
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Trainer forum posts fetched successfully',
+                    data: result
+                })
+
+            } catch (error) {
+                console.error('Trainer Dashboard - all forum post GET API error ', error)
+
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+        // Trainer Dashboard - Trainer Forum post Delete API
+        app.delete('/api/trainer/forum-posts/delete/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid forum post ID'
+                    })
+                }
+
+                const result = await forumPostCollection.deleteOne({ _id: new ObjectId(id) })
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Forum post deleted successfully',
+                    data: result
+                })
+
+            } catch (error) {
+                console.error('Trainer Forum post Delete API Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+        // Trainer Dashboard - Class Enrolled Students Data API
+        app.get('/api/trainer/classes/students/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid Id Format'
+                    })
+                }
+
+                const result = await bookingsCollection.find({ classId: id }).toArray()
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Class Enrolled students Data fetched successfully',
+                    data: result
+                })
+
+            } catch (error) {
+                console.error('Trainer Dashboard - Class Enrolled Students GET Api Error', error)
+
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+
+
+
+
+
 
         // ******* PAGE ROUTE API *******//
 
-        // [GET] ALL Community Forum Page with Server-side Pagination (Public) 
+        // [GET] ALL Community Forum Page - with Server-side Pagination (Public) 
         app.get('/api/forum-posts', async (req, res) => {
             try {
 
@@ -312,7 +405,7 @@ async function run() {
             }
         })
 
-        // Single class Api
+        // Single class Api (Private)
         app.get('/api/classes/single/:id', async (req, res) => {
             try {
 
@@ -335,8 +428,6 @@ async function run() {
                 })
             }
         })
-
-
 
 
 
@@ -366,7 +457,6 @@ async function run() {
             }
         })
 
-
         // [GET] HOME Featured Class API
         app.get('/api/featured-classes', async (req, res) => {
             try {
@@ -392,8 +482,10 @@ async function run() {
             }
         })
 
-        /**** USER DASHBOARD API *****/
 
+
+
+        /**** USER DASHBOARD API *****/
         // [POST] Add to Favorites Button API Functionality
         app.post('/api/favorites/add', async (req, res) => {
 
