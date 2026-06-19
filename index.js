@@ -33,8 +33,9 @@ async function run() {
 
         console.log("Connected Successfully to MongoDB!");
 
+        /***** Shared API Section *****/
 
-        // NO: 01 - [POST] Add forum post - admin and trainer dashboard api
+        // [POST] Add forum post - ADMIN and TRAINER Dashboard api
         app.post('/api/forum-posts', async (req, res) => {
             try {
                 const { title, image, description, authorName, authorEmail, authorRole } = req.body;
@@ -60,6 +61,9 @@ async function run() {
                 })
 
             } catch (error) {
+
+                console.error('forum POST API Error', error)
+
                 res.status(500).send({
                     message: "Forum Post Unsuccessful",
                     error: error.message
@@ -67,82 +71,45 @@ async function run() {
             }
         })
 
-        // NO: 02 [GET] Community Forum Page with Server-side Pagination (Public) 
-        app.get('/api/forum-posts', async (req, res) => {
+
+        //**** Trainner API Section ******//
+
+        // Trainer Dashboard OverView API
+        app.get('/api/trainer/overview/:email', async (req, res) => {
             try {
 
-                const page = parseInt(req.query.page) || 1;
-                const limit = parseInt(req.query.limit) || 6;
-                const skip = (page - 1) * limit;
+                const email = req.params.email;
 
-                const totalPosts = await forumPostCollection.countDocuments()
+                const totalClasses = await classesCollection.countDocuments({ trainerEmail: email })
+                const totalForumPosts = await forumPostCollection.countDocuments({ authorEmail: email })
 
-                const forumPostsData = await forumPostCollection.find().sort({ createdAt: -1 }).skip(skip).limit(limit).toArray()
+                const bookingStats = await classesCollection.aggregate([
+                    { $match: { trainerEmail: email } },
+                    { $group: { _id: null, totalStudents: { $sum: "$bookingCount" } } }
+                ]).toArray();
+
+                const totalStudents = bookingStats.length > 0 ? bookingStats[0].totalStudents : 0;
 
                 res.status(200).send({
                     success: true,
-                    message: 'Latest forum posts fetched successfully',
-                    totalPosts,
-                    totalPage: Math.ceil(totalPosts / limit),
-                    data: forumPostsData
+                    message: 'Trainer Overview Data fetched successfully',
+                    stats: {
+                        totalClasses,
+                        totalStudents,
+                        totalForumPosts
+                    }
                 })
-
             } catch (error) {
+                console.error('Trainer Overview Api Error', error)
                 res.status(500).send({
                     success: false,
-                    message: 'Community forum post fetched failed',
-                    error: error.message
+                    message: 'Failed to fetch overview data',
+                    error: error.message,
                 })
             }
         })
 
-        // NO: 03 [GET] Community Single Forum Post Details Page (Private)
-        app.get('/api/forum-posts/:id', async (req, res) => {
-
-            try {
-                const id = req.params.id;
-
-                const result = await forumPostCollection.findOne({ _id: new ObjectId(id) })
-
-                res.status(200).send({
-                    success: true,
-                    message: "Single Forum Data successfully fetched",
-                    data: result
-                })
-            } catch (error) {
-                console.error('forum single posts api error', error)
-                res.status(500).send({
-                    success: false,
-                    message: error.message
-                })
-            }
-        })
-
-        // NO: 04 [GET] Home top 3 latest forum post API
-        app.get('/api/latest-forum-posts', async (req, res) => {
-            try {
-                const result = await forumPostCollection.find().sort({ createdAt: -1 }).limit(3).toArray()
-
-                res.status(200).send({
-                    success: true,
-                    message: 'home page 3 latest forum post data fetched',
-                    data: result
-                })
-
-            } catch (error) {
-
-                console.error('Home page 3 latest post - Get api error', error)
-
-                res.status(500).send({
-                    success: false,
-                    message: 'Internal server error',
-                })
-            }
-        })
-
-        //  Trainner Api Section
-
-        // NO: 05 - [POST] Trainner Dashboard - Class Added API
+        // Trainner Dashboard - Class Added API
         app.post('/api/trainer/classes', async (req, res) => {
             try {
                 const { className, image, category, difficultyLevel, duration, scheduleDays, time, price, description, trainerEmail, trainerName } = req.body;
@@ -173,7 +140,9 @@ async function run() {
                 })
 
             } catch (error) {
+
                 console.error('Trainer Class Added Api Error', error)
+
                 res.status(500).send({
                     success: false,
                     message: 'Internal server error! Failed to add class.',
@@ -181,6 +150,158 @@ async function run() {
                 })
             }
         })
+
+
+
+
+
+        // ******* PAGE ROUTE API *******//
+
+        // [GET] ALL Community Forum Page with Server-side Pagination (Public) 
+        app.get('/api/forum-posts', async (req, res) => {
+            try {
+
+                const page = parseInt(req.query.page) || 1;
+                const limit = parseInt(req.query.limit) || 6;
+                const skip = (page - 1) * limit;
+
+                const totalPosts = await forumPostCollection.countDocuments()
+
+                const forumPostsData = await forumPostCollection.find().sort({ createdAt: -1 }).skip(skip).limit(limit).toArray()
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Latest forum posts fetched successfully',
+                    totalPosts,
+                    totalPage: Math.ceil(totalPosts / limit),
+                    data: forumPostsData
+                })
+
+            } catch (error) {
+
+                console.error('forum posts GET API arror', error)
+
+                res.status(500).send({
+                    success: false,
+                    message: 'Community forum post fetched failed',
+                    error: error.message
+                })
+            }
+        })
+
+        // [GET] Community Single Forum Post Details Page (Private)
+        app.get('/api/forum-posts/:id', async (req, res) => {
+
+            try {
+                const id = req.params.id;
+
+                const result = await forumPostCollection.findOne({ _id: new ObjectId(id) })
+
+                res.status(200).send({
+                    success: true,
+                    message: "Single Forum Data successfully fetched",
+                    data: result
+                })
+            } catch (error) {
+
+                console.error('forum single posts api error', error)
+
+                res.status(500).send({
+                    success: false,
+                    message: error.message
+                })
+            }
+        })
+
+        // Single class Api
+        app.get('/api/classes/single/:id', async (req, res) => {
+            try {
+
+                const id = req.params.id;
+
+                const result = await classesCollection.findOne({ _id: new ObjectId(id) });
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Single Class Data fetched successfully',
+                    data: result,
+                })
+
+            } catch (error) {
+                console.error('Single Class API Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+
+
+
+
+
+        /******* HOME PAGE API ******/
+
+        // [GET] Home top 3 latest forum post API
+        app.get('/api/latest-forum-posts', async (req, res) => {
+            try {
+                const result = await forumPostCollection.find().sort({ createdAt: -1 }).limit(3).toArray()
+
+                res.status(200).send({
+                    success: true,
+                    message: 'home page 3 latest forum post data fetched',
+                    data: result
+                })
+
+            } catch (error) {
+
+                console.error('Home page 3 latest post - Get api error', error)
+
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal server error',
+                    error: error.message
+                })
+            }
+        })
+
+
+        // [GET] HOME Featured Class API
+        app.get('/api/featured-classes', async (req, res) => {
+            try {
+
+                const result = await classesCollection.find({ status: 'approved' })
+                    .sort({ bookingCount: -1 })
+                    .limit(6)
+                    .toArray();
+
+                res.status(200).send({
+                    success: true,
+                    message: 'featured class fetched successfully',
+                    data: result,
+                })
+
+            } catch (error) {
+                console.error('Featured Class Api Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'featured class load failed',
+                    error: error.message
+                })
+            }
+        })
+
+        /**** USER DASHBOARD API *****/
+
+        // [POST] Add to Favorites Button API Functionality
+        app.post('/api/favorites/add', async (req, res) => {
+
+            const { classId, userEmail, className, image, trainerName } = req.body
+
+        })
+
 
 
 
