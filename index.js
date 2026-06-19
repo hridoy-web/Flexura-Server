@@ -72,9 +72,9 @@ async function run() {
         })
 
 
-        //**** Trainner API Section ******//
+        //**** Trainner DASHBOARD API Section ******//
 
-        // Trainer Dashboard OverView API
+        // Trainer Dashboard - OverView API
         app.get('/api/trainer/overview/:email', async (req, res) => {
             try {
 
@@ -151,7 +151,77 @@ async function run() {
             }
         })
 
+        // Trainer Dashboard - GET All Classes API
+        app.get('/api/trainer/my-classes/:email', async (req, res) => {
+            try {
+                const email = req.params.email;
 
+                const result = await classesCollection.find({ trainerEmail: email }).sort({ createdAt: -1 }).toArray()
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Trainer classes fetched successfully',
+                    data: result,
+                })
+
+            } catch (error) {
+                console.error('Trainer Dashboard My Classes GET API Error', error)
+
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+        // Trainer Dashboard - Trainer Class UPDATE API
+        app.put('/api/trainer/classes/update/:id', async (req, res) => {
+            try {
+
+                const id = req.params.id;
+                const classesData = req.body;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: "Wrong Class ID"
+                    })
+                }
+
+                const filter = { _id: new ObjectId(id) }
+
+                const updateClassesData = {
+                    $set: {
+                        className: classesData.className,
+                        image: classesData.image,
+                        category: classesData.category,
+                        difficultyLevel: classesData.difficultyLevel,
+                        duration: classesData.duration,
+                        scheduleDays: classesData.scheduleDays,
+                        time: classesData.time,
+                        price: parseFloat(classesData.price),
+                        description: classesData.description,
+                    }
+                }
+
+                const result = await classesCollection.updateOne(filter, updateClassesData)
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Class Content Successfully Update',
+                    data: result
+                })
+
+            } catch (error) {
+                console.error('Trainer Dashboard Class Update API Error:', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
 
 
 
