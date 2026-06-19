@@ -223,6 +223,35 @@ async function run() {
             }
         })
 
+        // Trainer Dashboard - Class DELETE API
+        app.delete('/api/trainer/classes/delete/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invaild Class ID Format'
+                    })
+                }
+
+                const result = await classesCollection.deleteOne({_id: new ObjectId(id)})
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Class has been deleted successfully',
+                    data: result
+                })
+
+            } catch (error) {
+                console.error('Trainer Dashboard - Class Delete API Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
 
 
         // ******* PAGE ROUTE API *******//
