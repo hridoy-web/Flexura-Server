@@ -55,7 +55,8 @@ async function run() {
 
                 res.status(201).send({
                     success: true,
-                    message: 'Post Successfully Added in forum'
+                    message: 'Post Successfully Added in forum',
+                    insertedId: result.insertedId
                 })
 
             } catch (error) {
@@ -95,29 +96,7 @@ async function run() {
             }
         })
 
-        // NO: 03 [GET] Home top 3 latest forum post API
-        app.get('/api/latest-forum-posts', async (req, res) => {
-            try {
-                const result = await forumPostCollection.find().sort({ createdAt: -1 }).limit(3).toArray()
-
-                res.status(200).send({
-                    success: true,
-                    message: 'home page 3 latest forum post data fetched',
-                    data: result
-                })
-
-            } catch (error) {
-
-                console.error('Home page 3 latest post - Get api error', error)
-
-                res.status(500).send({
-                    success: false,
-                    message: 'Internal server error',
-                })
-            }
-        })
-
-        // NO: 04 [GET] Single Forum Post Details Page (Private)
+        // NO: 03 [GET] Community Single Forum Post Details Page (Private)
         app.get('/api/forum-posts/:id', async (req, res) => {
 
             try {
@@ -139,8 +118,69 @@ async function run() {
             }
         })
 
+        // NO: 04 [GET] Home top 3 latest forum post API
+        app.get('/api/latest-forum-posts', async (req, res) => {
+            try {
+                const result = await forumPostCollection.find().sort({ createdAt: -1 }).limit(3).toArray()
 
+                res.status(200).send({
+                    success: true,
+                    message: 'home page 3 latest forum post data fetched',
+                    data: result
+                })
 
+            } catch (error) {
+
+                console.error('Home page 3 latest post - Get api error', error)
+
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal server error',
+                })
+            }
+        })
+
+        //  Trainner Api Section
+
+        // NO: 05 - [POST] Trainner Dashboard - Class Added API
+        app.post('/api/trainer/classes', async (req, res) => {
+            try {
+                const { className, image, category, difficultyLevel, duration, scheduleDays, time, price, description, trainerEmail, trainerName } = req.body;
+
+                const newClass = {
+                    className,
+                    image,
+                    category,
+                    difficultyLevel,
+                    duration,
+                    scheduleDays,
+                    time,
+                    price: parseFloat(price),
+                    description,
+                    trainerEmail,
+                    trainerName,
+                    bookingCount: 0,
+                    status: 'pending',
+                    createdAt: new Date()
+                }
+
+                const result = await classesCollection.insertOne(newClass);
+
+                res.status(201).send({
+                    success: true,
+                    message: 'Class added successfully and pending for Admin approval!',
+                    insertedId: result.insertedId
+                })
+
+            } catch (error) {
+                console.error('Trainer Class Added Api Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal server error! Failed to add class.',
+                    error: error.message
+                })
+            }
+        })
 
 
 
