@@ -25,7 +25,7 @@ async function run() {
 
         // all database collection 
         const db = client.db('flexuraDb')
-        const userCollection = db.collection('users')
+        const usersCollection = db.collection('users')
         const classesCollection = db.collection('classes')
         const bookingsCollection = db.collection('bookings')
         const favoritesCollection = db.collection('favorites')
@@ -49,6 +49,7 @@ async function run() {
                     authorRole,
                     like: [],
                     dislike: [],
+                    comments: [],
                     createdAt: new Date()
                 }
 
@@ -71,6 +72,107 @@ async function run() {
             }
         })
 
+
+
+
+        /****** ADMIN DASHBOARD API SECTION ******/
+
+        // Admin Dashboard - Overview Stats API
+        app.get('/api/admin/dashboard/overview-stats', async (req, res) => {
+            try {
+
+                const totalUsers = await usersCollection.countDocuments();
+                const approvedClasses = await classesCollection.countDocuments({ status: 'approved' })
+                const totalTransactions = await bookingsCollection.countDocuments({ status: 'paid' })
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Admin overview stats fetched successfully',
+                    data: {
+                        totalUsers,
+                        approvedClasses,
+                        totalTransactions,
+                    }
+                })
+
+            } catch (error) {
+                console.error('Admin Overview Stats API Error:', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+        // Admin Dashboard - GET All Registered Users
+        app.get('/api/admin/users', async (req, res) => {
+            try {
+
+                const allUsers = await usersCollection.find().toArray();
+
+                res.status(200).send({
+                    success: true,
+                    message: 'All users data fetched successfully',
+                    data: allUsers,
+                })
+
+            } catch (error) {
+                console.error('Admin Dashboard All Users GET API Error', error)
+
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+        // Get All Pending Trainer Applications
+        app.get('/api/admin/trainer-applications', async (req, res) => {
+            try {
+
+                const applications = await usersCollection.find({ trainerStatus: 'pending' }).toArray()
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Pending Trainer Applications data fetched successfully',
+                    data: applications,
+                })
+
+            } catch (error) {
+                console.error('Admin Dashboard - Trainer application GET API Error', error)
+
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+
+        })
+
+        // Get All Active Trainers
+        app.get('/api/admin/active/trainers', async (req, res) => {
+            try {
+                const trainerList = await usersCollection.find({ role: 'trainer' }).toArray()
+
+                res.status(200).send({
+                    success: true,
+                    message: 'All active trainers data fetched successfully',
+                    data: trainerList,
+                })
+
+            } catch (error) {
+                console.error('Admin Dashboard - GET Active Trainers API Error', error)
+
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
 
 
 
