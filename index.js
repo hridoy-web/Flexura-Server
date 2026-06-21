@@ -272,7 +272,7 @@ async function run() {
             }
         })
 
-        // Get All Active Trainers
+        // Admin Dashboard - Get All Active Trainers
         app.get('/api/admin/active/trainers', async (req, res) => {
             try {
                 const trainerList = await usersCollection.find({ role: 'trainer' }).toArray()
@@ -294,7 +294,39 @@ async function run() {
             }
         })
 
-        // Get All Submitted Trainer Classes
+        // Admin Dashboard - Demote Trainer to Normal User API
+        app.patch('/api/admin/trainers/demote/:id', async (req, res) => {
+            try {
+                const id = req.params.id
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid Id'
+                    })
+                }
+
+                const result = await usersCollection.updateOne({ _id: new ObjectId(id) },
+                    { $set: { role: 'user', trainerStatus: 'demoted' } }
+                )
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Trainer status demoted successfully',
+                    data: result
+                })
+
+            } catch (error) {
+                console.error('Admin Dashboard - Demote Trainer API Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+        // Admin Dashboard - Get All Submitted Trainer Classes
         app.get('/api/admin/trainer-classes', async (req, res) => {
             try {
                 const classes = await classesCollection.find().toArray()
@@ -316,6 +348,130 @@ async function run() {
             }
         })
 
+        // Admin Dashboard - Trainer Classes Reject or approve
+        app.patch('/api/admin/classes/status/:id', async (req, res) => {
+            try {
+                const id = req.params.id
+                const { status } = req.body
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid Class ID Format'
+                    })
+                }
+
+                if (!status) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Status fields is required'
+                    });
+                }
+
+                const result = await classesCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: { status: status } }
+                )
+
+                res.status(200).send({
+                    success: true,
+                    message: `Class is now ${status}`,
+                    data: {
+                        id,
+                        status,
+                        modifiedCount: result.modifiedCount
+                    }
+                })
+
+            } catch (error) {
+                console.error('Admin Dashboard - Class Status Update PATCH API Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+        //  Admin Dashboard - Delete Trainer Class API
+        app.delete('/api/admin/classes/delete/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid Id format'
+                    })
+                }
+                const result = await classesCollection.deleteOne({ _id: new ObjectId(id) })
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Class has been delete successfully',
+                    data: result
+                })
+
+            } catch (error) {
+                console.error('Admin Dashboard - Delete Trainer Class API Error', error)
+
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+        // Admin Dashboard - Get all forum Post
+        app.get('/api/admin/find/all-forum-posts', async (req, res) => {
+            try {
+                const result = await forumPostCollection.find().sort({ createdAt: -1 }).toArray()
+
+                res.status(200).send({
+                    success: true,
+                    message: 'All forum post fetched successfully',
+                    data: result
+                })
+            } catch (error) {
+                console.error('Admin Dashboard - Get all forum Post Api Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+        // Admin Dashboard - All forum Post delete APi
+        app.delete('/api/admin/delete/forum-posts/:id', async (req, res) => {
+            try {
+                const id = req.params.id
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invaild ID Format'
+                    })
+                }
+
+                const result = await forumPostCollection.deleteOne({ _id: new ObjectId(id) })
+
+                res.status(200).send({
+                    success: true,
+                    message: 'forum post deleted successfully',
+                    data: result
+                })
+
+            } catch (error) {
+                console.error('Admin Dashboard - All forum Post delete API Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
 
 
 
