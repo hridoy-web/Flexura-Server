@@ -105,7 +105,7 @@ async function run() {
             }
         })
 
-        // Admin Dashboard - GET All Registered Users
+        // Admin Dashboard - GET All Registered Users List API
         app.get('/api/admin/users', async (req, res) => {
             try {
 
@@ -128,7 +128,71 @@ async function run() {
             }
         })
 
-        // Get All Pending Trainer Applications
+        //  Admin dasboard - Users Actions Block/unblock/Admin API
+        app.patch('/api/admin/users/action/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const { actionType } = req.body;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid Users ID'
+                    })
+                }
+
+                let setUsersAction = {};
+                let successMessage = '';
+
+                if (actionType === 'block') {
+                    setUsersAction = { $set: { status: 'blocked' } }
+                    successMessage = 'User has been blocked successfully'
+                } else if (actionType === 'unblock') {
+                    setUsersAction = { $set: { status: 'active' } }
+                    successMessage = 'User has been unblocked successfully'
+                } else if (actionType === 'makeAdmin') {
+                    setUsersAction = { $set: { role: 'admin' } }
+                    successMessage = 'User has been promoted to admin'
+                } else {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid Action Type!'
+                    })
+                }
+
+                const result = await usersCollection.updateOne({ _id: new ObjectId(id) }, setUsersAction)
+
+                if (!result.matchedCount) {
+                    return res.status(404).send({
+                        success: false,
+                        message: 'user not found'
+                    })
+                }
+
+                if (!result.modifiedCount) {
+                    return res.status(200).send({
+                        success: true,
+                        message: 'No changes needed'
+                    })
+                }
+
+                res.status(200).send({
+                    success: true,
+                    message: successMessage,
+                    data: result
+                })
+
+            } catch (error) {
+                console.error('Admin Dashboard - User Action API Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+        // Admin dasboard - Get All Pending Trainer Applications
         app.get('/api/admin/trainer-applications', async (req, res) => {
             try {
 
@@ -152,6 +216,62 @@ async function run() {
 
         })
 
+        // Admin dasboard - Trainer Application (Approve / Reject with Feedback)
+        app.patch('/api/admin/trainer-applications/action/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const { status, feedback } = req.body;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid Id'
+                    })
+                }
+
+                let updateDoc = {};
+                if (status === 'approved') {
+                    updateDoc = {
+                        $set: {
+                            role: 'trainer',
+                            trainerStatus: 'approved',
+                            feedback: feedback || ''
+                        }
+                    }
+                } else if (status === 'rejected') {
+                    updateDoc = {
+                        $set: {
+                            role: 'user',
+                            trainerStatus: 'rejected',
+                            feedback: feedback
+                        }
+                    }
+                } else {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid Status'
+                    })
+                }
+
+                const result = await usersCollection.updateOne({ _id: new ObjectId(id) }, updateDoc)
+
+                res.status(200).send({
+                    success: true,
+                    message: `Application ${status} successfully`,
+                    data: result
+                })
+
+            } catch (error) {
+                console.error('Admin Dashboard - Trainer Application Action PATCH API Error:', error)
+
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
         // Get All Active Trainers
         app.get('/api/admin/active/trainers', async (req, res) => {
             try {
@@ -173,6 +293,29 @@ async function run() {
                 })
             }
         })
+
+        // Get All Submitted Trainer Classes
+        app.get('/api/admin/trainer-classes', async (req, res) => {
+            try {
+                const classes = await classesCollection.find().toArray()
+
+                res.status(200).send({
+                    success: true,
+                    message: 'All trainer Class fetched successful',
+                    data: classes,
+                })
+
+            } catch (error) {
+                console.error('Admin Dashboard - All Trainer Classes GET API Error', error)
+
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
 
 
 
