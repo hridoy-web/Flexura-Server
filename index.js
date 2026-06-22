@@ -134,9 +134,6 @@ async function run() {
         })
 
 
-
-
-
         /****** ADMIN DASHBOARD API SECTION ******/
 
         // Admin Dashboard - Overview Stats API
@@ -684,9 +681,6 @@ async function run() {
         })
 
 
-
-
-
         // ******* PAGE ROUTE API *******//
 
         // ALL Community Forum Page - with Server-side Pagination (Public) 
@@ -846,8 +840,6 @@ async function run() {
                 })
             }
         })
-
-
 
 
         /*** FORUM POST COMMENTS & REPLIES SECTION ***/
@@ -1038,6 +1030,81 @@ async function run() {
         })
 
 
+        /**** Favorite Add OR Remove API Section *****/
+
+        // Favorite: Add or Remove api
+        app.post('/api/favorites', async (req, res) => {
+            try {
+                const { classId, userEmail, className, image, category } = req.body;
+
+                const isExist = await favoritesCollection.findOne({ classId, userEmail });
+
+                if (isExist) {
+                    await favoritesCollection.deleteOne({ classId, userEmail });
+                    return res.status(200).send({
+                        success: true,
+                        isFavorite: false,
+                        message: 'Removed from your favorites successfully!'
+                    });
+                }
+
+                const favoriteDoc = {
+                    classId,
+                    userEmail,
+                    className,
+                    image,
+                    category,
+                    addedAt: new Date()
+                };
+
+                await favoritesCollection.insertOne(favoriteDoc);
+
+                res.status(201).send({
+                    success: true,
+                    isFavorite: true,
+                    message: 'Successfully added to your favorites!'
+                });
+
+            } catch (error) {
+                console.error('Favorite Toggle API Error:', error);
+
+                res.status(500).send({
+                    success: false,
+                    message: error.message
+                });
+            }
+        });
+
+
+        //  Check Favorited by User
+        app.get('/api/favorites/check', async (req, res) => {
+            try {
+                const { classId, userEmail } = req.query;
+
+                const isExist = await favoritesCollection.findOne({ classId, userEmail });
+
+                if (isExist) {
+                    return res.status(200).send({
+                        isFavorite: true
+                    });
+                } else {
+                    return res.status(200).send({
+                        isFavorite: false
+                    });
+                }
+
+            } catch (error) {
+                console.error('favorites check api error', error)
+
+                res.status(500).send({
+                    success: false,
+                    message: error.message
+                });
+            }
+        });
+
+
+
 
         /******* HOME PAGE API ******/
 
@@ -1090,18 +1157,67 @@ async function run() {
         })
 
 
-
-
         /**** USER DASHBOARD API *****/
-        // [POST] Add to Favorites Button API Functionality
-        app.post('/api/favorites/add', async (req, res) => {
 
-            const { classId, userEmail, className, image, trainerName } = req.body
+        // User Dashboard -  GET All favorites list
+        app.get('/api/favorites/:email', async (req, res) => {
+            try {
+                const email = req.params.email
 
+                const query = { userEmail: email }
+                const result = await favoritesCollection.find(query).toArray()
+
+                res.status(200).send({
+                    success: true,
+                    message: 'favorites collection list fetched successfully',
+                    data: result
+                })
+
+            } catch (error) {
+                console.error('Get favorites dashboard API Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
         })
 
+        // User Dashboard - Favorites Class delete api
+        app.delete('/api/favorites/delete/:id', async (req, res) => {
+            try {
+                const id = req.params.id
 
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid ID Format'
+                    })
+                }
 
+                const result = await favoritesCollection.deleteOne({ _id: new ObjectId(id) })
+
+                if (result.deletedCount > 0) {
+                    res.status(200).send({
+                        success: true,
+                        message: "Favorites deleted successfully!"
+                    })
+                } else {
+                    res.status(404).send({
+                        success: false,
+                        message: 'Class not found in favorites'
+                    })
+                }
+
+            } catch (error) {
+                console.error('Delete favorite dashboard API Error:', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
 
 
 
