@@ -941,9 +941,103 @@ async function run() {
             }
         })
 
+        // Edit users own comment
+        app.patch('/api/forum-posts/comment/edit/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const { commentId, userEmail, newText } = req.body;
+
+                if (!ObjectId.isValid(id) || !ObjectId.isValid(commentId)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid ID Format'
+                    })
+                }
+
+                const result = await forumPostCollection.updateOne(
+                    {
+                        _id: new ObjectId(id),
+                        "comments.commentId": new ObjectId(commentId),
+                        "comments.userEmail": userEmail
+                    },
+                    { $set: { "comments.$.text": newText } }
+                )
+
+                if (result.modifiedCount > 0) {
+                    res.status(200).send({
+                        success: true,
+                        message: 'Comment updated successfully',
+                        data: result.modifiedCount
+                    });
+                } else {
+                    res.status(403).send({
+                        success: false,
+                        message: 'Unauthorized or Comment not found'
+                    });
+                }
+
+            } catch (error) {
+                console.error('Edit users own comment API Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+        // delete Own comment api
+        app.patch('/api/forum-posts/comment/delete/:id', async (req, res) => {
+            try {
+                const id = req.params.id
+                const { commentId, userEmail } = req.body
+
+                if (!ObjectId.isValid(id) || !ObjectId.isValid(commentId)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid ID Format'
+                    });
+                }
+                const result = await forumPostCollection.updateOne(
+                    {
+                        _id: new ObjectId(id),
+                        "comments.commentId": new ObjectId(commentId),
+                        "comments.userEmail": userEmail
+                    },
+                    {
+                        $pull: {
+                            comments: {
+                                commentId: new ObjectId(commentId),
+                                userEmail: userEmail
+                            }
+                        }
+                    }
+                )
+
+                if (result.modifiedCount > 0) {
+                    res.status(200).send({
+                        success: true,
+                        message: "Comment Deleted Successfully",
+                        deleteCount: result.modifiedCount
+                    })
+                } else {
+                    return res.status(403).send({
+                        success: false,
+                        message: 'Unauthorized! You can only delete your own comment'
+                    })
+                }
+
+            } catch (error) {
+                console.error('Delete Own comment api Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
 
 
-        
 
         /******* HOME PAGE API ******/
 
