@@ -683,6 +683,38 @@ async function run() {
 
         // ******* PAGE ROUTE API *******//
 
+        // All Approved classes find and search or category api
+        app.get('/api/classes', async (req, res) => {
+            try {
+                const { search, category } = req.query
+
+                let query = { status: 'Approved' }
+
+                if (search) {
+                    query.className = { $regex: search, $options: 'i' }
+                }
+
+                if (category && category !== 'All') {
+                    query.category = category;
+                }
+
+                const result = await classesCollection.find(query).toArray();
+
+                res.status(200).send({
+                    success: true,
+                    totalClasses: result.length,
+                    data: result
+                });
+
+            } catch (error) {
+                console.error('Get Classes API Error:', error);
+                res.status(500).send({
+                    success: false,
+                    message: error.message
+                });
+            }
+        });
+
         // ALL Community Forum Page - with Server-side Pagination (Public) 
         app.get('/api/forum-posts', async (req, res) => {
             try {
