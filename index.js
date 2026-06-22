@@ -1219,6 +1219,53 @@ async function run() {
             }
         })
 
+        // apply Trainer application api
+        app.patch('/api/user/apply-trainer', async (req, res) => {
+            try {
+                const { email, experience, specialty, bio } = req.body;
+
+                if (!email) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'User email is required'
+                    });
+                }
+
+                const filter = { email: email };
+
+                const updateDoc = {
+                    $set: {
+                        trainerStatus: 'pending',
+                        trainerApplication: {
+                            experience: parseInt(experience) || 0,
+                            specialty,
+                            bio,
+                            appliedAt: new Date()
+                        }
+                    }
+                };
+
+                const result = await usersCollection.updateOne(filter, updateDoc);
+
+                if (result.modifiedCount > 0) {
+                    res.status(200).send({
+                        success: true,
+                        message: 'Your application submitted. Wait Admin approval!'
+                    });
+                } else {
+                    res.status(404).send({ success: false, message: 'User account not found' });
+                }
+
+            } catch (error) {
+                console.error('Apply Trainer PATCH API Error:', error);
+
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error',
+                    error: error.message
+                });
+            }
+        });
 
 
 
