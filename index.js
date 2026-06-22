@@ -33,6 +33,7 @@ async function run() {
 
         console.log("Connected Successfully to MongoDB!");
 
+
         /***** Shared API Section *****/
 
         // [POST] Add forum post - ADMIN and TRAINER Dashboard api
@@ -71,6 +72,67 @@ async function run() {
                 })
             }
         })
+
+        // Trainer Class Delete API - Admin Dashboard or Trainer Dashboard
+        app.delete('/api/classes/delete/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid Class ID Format'
+                    })
+                }
+
+                const result = await classesCollection.deleteOne({ _id: new ObjectId(id) })
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Class has been deleted successfully',
+                    data: result
+                })
+
+            } catch (error) {
+                console.error('Trainer Dashboard - Class Delete API Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+        // Forum post Delete API - Admin and Trainer Dashboard
+        app.delete('/api/forum-posts/delete/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid forum post ID'
+                    })
+                }
+
+                const result = await forumPostCollection.deleteOne({ _id: new ObjectId(id) })
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Forum post deleted successfully',
+                    data: result
+                })
+
+            } catch (error) {
+                console.error('Trainer Forum post Delete API Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
 
 
 
@@ -393,36 +455,6 @@ async function run() {
             }
         })
 
-        //  Admin Dashboard - Delete Trainer Class API
-        app.delete('/api/admin/classes/delete/:id', async (req, res) => {
-            try {
-                const id = req.params.id;
-
-                if (!ObjectId.isValid(id)) {
-                    return res.status(400).send({
-                        success: false,
-                        message: 'Invalid Id format'
-                    })
-                }
-                const result = await classesCollection.deleteOne({ _id: new ObjectId(id) })
-
-                res.status(200).send({
-                    success: true,
-                    message: 'Class has been delete successfully',
-                    data: result
-                })
-
-            } catch (error) {
-                console.error('Admin Dashboard - Delete Trainer Class API Error', error)
-
-                res.status(500).send({
-                    success: false,
-                    message: 'Internal Server Error! Something Wrong!',
-                    error: error.message,
-                })
-            }
-        })
-
         // Admin Dashboard - Get all forum Post
         app.get('/api/admin/find/all-forum-posts', async (req, res) => {
             try {
@@ -442,37 +474,6 @@ async function run() {
                 })
             }
         })
-
-        // Admin Dashboard - All forum Post delete APi
-        app.delete('/api/admin/delete/forum-posts/:id', async (req, res) => {
-            try {
-                const id = req.params.id
-
-                if (!ObjectId.isValid(id)) {
-                    return res.status(400).send({
-                        success: false,
-                        message: 'Invaild ID Format'
-                    })
-                }
-
-                const result = await forumPostCollection.deleteOne({ _id: new ObjectId(id) })
-
-                res.status(200).send({
-                    success: true,
-                    message: 'forum post deleted successfully',
-                    data: result
-                })
-
-            } catch (error) {
-                console.error('Admin Dashboard - All forum Post delete API Error', error)
-                res.status(500).send({
-                    success: false,
-                    message: 'Internal Server Error! Something Wrong!',
-                    error: error.message,
-                })
-            }
-        })
-
 
 
 
@@ -627,36 +628,6 @@ async function run() {
             }
         })
 
-        // Trainer Dashboard - Class DELETE API
-        app.delete('/api/trainer/classes/delete/:id', async (req, res) => {
-            try {
-                const id = req.params.id;
-
-                if (!ObjectId.isValid(id)) {
-                    return res.status(400).send({
-                        success: false,
-                        message: 'Invaild Class ID Format'
-                    })
-                }
-
-                const result = await classesCollection.deleteOne({ _id: new ObjectId(id) })
-
-                res.status(200).send({
-                    success: true,
-                    message: 'Class has been deleted successfully',
-                    data: result
-                })
-
-            } catch (error) {
-                console.error('Trainer Dashboard - Class Delete API Error', error)
-                res.status(500).send({
-                    success: false,
-                    message: 'Internal Server Error! Something Wrong!',
-                    error: error.message,
-                })
-            }
-        })
-
         // Trainer Dashboard - ALL Forum POST Collection API
         app.get('/api/trainer/my-forum-posts/:email', async (req, res) => {
             try {
@@ -673,36 +644,6 @@ async function run() {
             } catch (error) {
                 console.error('Trainer Dashboard - all forum post GET API error ', error)
 
-                res.status(500).send({
-                    success: false,
-                    message: 'Internal Server Error! Something Wrong!',
-                    error: error.message,
-                })
-            }
-        })
-
-        // Trainer Dashboard - Trainer Forum post Delete API
-        app.delete('/api/trainer/forum-posts/delete/:id', async (req, res) => {
-            try {
-                const id = req.params.id;
-
-                if (!ObjectId.isValid(id)) {
-                    return res.status(400).send({
-                        success: false,
-                        message: 'Invalid forum post ID'
-                    })
-                }
-
-                const result = await forumPostCollection.deleteOne({ _id: new ObjectId(id) })
-
-                res.status(200).send({
-                    success: true,
-                    message: 'Forum post deleted successfully',
-                    data: result
-                })
-
-            } catch (error) {
-                console.error('Trainer Forum post Delete API Error', error)
                 res.status(500).send({
                     success: false,
                     message: 'Internal Server Error! Something Wrong!',
@@ -746,11 +687,9 @@ async function run() {
 
 
 
-
-
         // ******* PAGE ROUTE API *******//
 
-        // [GET] ALL Community Forum Page - with Server-side Pagination (Public) 
+        // ALL Community Forum Page - with Server-side Pagination (Public) 
         app.get('/api/forum-posts', async (req, res) => {
             try {
 
@@ -782,7 +721,7 @@ async function run() {
             }
         })
 
-        // [GET] Community Single Forum Post Details Page (Private)
+        // Community forum Single Posts Details Page (Private)
         app.get('/api/forum-posts/:id', async (req, res) => {
 
             try {
@@ -830,8 +769,181 @@ async function run() {
             }
         })
 
+        // Like OR Dislike forum post (Private api)
+        app.patch('/api/forum-posts/like/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const { userEmail, voteType } = req.body;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid ID Format'
+                    })
+                }
+
+                const post = await forumPostCollection.findOne({ _id: new ObjectId(id) })
+
+                if (!post) {
+                    return res.status(404).send({
+                        success: false,
+                        message: 'Post not found'
+                    })
+                }
+
+                const likes = post.like || [];
+                const dislikes = post.dislikes || [];
+
+                let updateDoc = {};
+                let statusMessage = '';
+
+                if (voteType === 'like') {
+                    if (likes.includes(userEmail)) {
+                        updateDoc = { $pull: { like: userEmail } };
+                        statusMessage = 'Like removed';
+
+                    } else {
+                        updateDoc = {
+                            $addToSet: { like: userEmail },
+                            $pull: { dislike: userEmail }
+                        };
+                        statusMessage = 'Post liked!';
+                    }
+
+                } else if (voteType === 'dislike') {
+                    if (dislikes.includes(userEmail)) {
+                        updateDoc = { $pull: { dislike: userEmail } };
+                        statusMessage = 'Dislike removed';
+
+                    } else {
+                        updateDoc = {
+                            $addToSet: { dislike: userEmail },
+                            $pull: { like: userEmail }
+                        };
+                        statusMessage = 'Post disliked!';
+                    }
+
+                } else {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid Vote Type'
+                    });
+                }
+
+                const result = await forumPostCollection.updateOne({ _id: new ObjectId(id) }, updateDoc)
+
+                res.status(200).send({
+                    success: true,
+                    message: statusMessage
+                })
+
+            } catch (error) {
+                console.error('Like OR Dislike forum post API Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
 
 
+
+
+        /*** FORUM POST COMMENTS & REPLIES SECTION ***/
+
+        // ADD Comment Forum POST API
+        app.patch('/api/forum-posts/comment/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const { userName, userEmail, userImage, text } = req.body;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invalid ID Format'
+                    })
+                }
+
+                const newComment = {
+                    commentId: new ObjectId(),
+                    userName,
+                    userEmail,
+                    userImage,
+                    text,
+                    replies: [],
+                    createdAt: new Date()
+                }
+
+                const result = await forumPostCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $push: { comments: newComment } }
+                )
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Comments posted successfully',
+                    data: newComment,
+                    modifiedCount: result.modifiedCount
+                })
+
+            } catch (error) {
+                console.error('ADD Comment API Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+        // Comments Reply API
+        app.patch('/api/forum-posts/comment/reply/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const { commentId, userName, userEmail, userImage, text } = req.body;
+
+                if (!ObjectId.isValid(id)) {
+                    return res.status(400).send({
+                        success: false,
+                        message: 'Invaild ID Format'
+                    })
+                }
+
+                const newReply = {
+                    replyId: new ObjectId(),
+                    userName,
+                    userEmail,
+                    userImage,
+                    text,
+                    createdAt: new Date()
+                }
+
+                const result = await forumPostCollection.updateOne(
+                    { _id: new ObjectId(id), "comments.commentId": new ObjectId(commentId) },
+                    { $push: { "comments.$.replies": newReply } }
+                )
+
+                res.status(200).send({
+                    success: true,
+                    message: 'Reply added successfully',
+                    data: newReply,
+                    modifiedCount: result.modifiedCount
+                })
+
+            } catch (error) {
+                console.error('Comment Reply API Error', error)
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error! Something Wrong!',
+                    error: error.message,
+                })
+            }
+        })
+
+
+
+        
 
         /******* HOME PAGE API ******/
 
