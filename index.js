@@ -25,7 +25,7 @@ async function run() {
 
         // all database collection 
         const db = client.db('flexuraDb')
-        const usersCollection = db.collection('users')
+        const usersCollection = db.collection('user')
         const classesCollection = db.collection('classes')
         const bookingsCollection = db.collection('bookings')
         const favoritesCollection = db.collection('favorites')
@@ -683,31 +683,43 @@ async function run() {
 
         // ******* PAGE ROUTE API *******//
 
-        // All Approved classes find and search or category api
+        // All Approved classes find and search or category api with Server-side Pagination
         app.get('/api/classes', async (req, res) => {
             try {
-                const { search, category } = req.query
+                const { search, category } = req.query;
 
-                let query = { status: 'Approved' }
+                const page = parseInt(req.query.page) || 1;
+                const limit = parseInt(req.query.limit) || 9; 
+                const skip = (page - 1) * limit;
+
+                let query = { status: 'approved' };
 
                 if (search) {
-                    query.className = { $regex: search, $options: 'i' }
+                    query.className = { $regex: search, $options: 'i' };
                 }
 
                 if (category && category !== 'All') {
                     query.category = category;
                 }
 
-                const result = await classesCollection.find(query).toArray();
+                const totalClasses = await classesCollection.countDocuments(query);
+
+                const result = await classesCollection.find(query)
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .toArray();
 
                 res.status(200).send({
                     success: true,
-                    totalClasses: result.length,
+                    totalClasses,
+                    totalPage: Math.ceil(totalClasses / limit),
                     data: result
                 });
 
             } catch (error) {
                 console.error('Get Classes API Error:', error);
+
                 res.status(500).send({
                     success: false,
                     message: error.message
@@ -1107,7 +1119,6 @@ async function run() {
             }
         });
 
-
         //  Check Favorited by User
         app.get('/api/favorites/check', async (req, res) => {
             try {
@@ -1134,8 +1145,6 @@ async function run() {
                 });
             }
         });
-
-
 
 
         /******* HOME PAGE API ******/
