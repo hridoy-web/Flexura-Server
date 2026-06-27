@@ -5,7 +5,7 @@ const cors = require('cors')
 require('dotenv').config()
 
 const app = express();
-const port = process.env.PORT
+const port = process.env.PORT || 5000;
 const uri = process.env.MONGODB_URI
 
 // midleware
@@ -689,7 +689,7 @@ async function run() {
                 const { search, category } = req.query;
 
                 const page = parseInt(req.query.page) || 1;
-                const limit = parseInt(req.query.limit) || 9; 
+                const limit = parseInt(req.query.limit) || 9;
                 const skip = (page - 1) * limit;
 
                 let query = { status: 'approved' };
@@ -742,9 +742,11 @@ async function run() {
                 res.status(200).send({
                     success: true,
                     message: 'Latest forum posts fetched successfully',
-                    totalPosts,
-                    totalPage: Math.ceil(totalPosts / limit),
-                    data: forumPostsData
+                    data: {
+                        posts: forumPostsData,
+                        totalPage: Math.ceil(totalPosts / limit),
+                        totalPosts
+                    }
                 })
 
             } catch (error) {
@@ -830,7 +832,7 @@ async function run() {
                 }
 
                 const likes = post.like || [];
-                const dislikes = post.dislikes || [];
+                const dislikes = post.dislike || [];
 
                 let updateDoc = {};
                 let statusMessage = '';
@@ -872,7 +874,8 @@ async function run() {
 
                 res.status(200).send({
                     success: true,
-                    message: statusMessage
+                    message: statusMessage,
+                    data: result
                 })
 
             } catch (error) {
@@ -888,7 +891,7 @@ async function run() {
 
         /*** FORUM POST COMMENTS & REPLIES SECTION ***/
 
-        // ADD Comment Forum POST API
+        // ADD Comment Forum API
         app.patch('/api/forum-posts/comment/:id', async (req, res) => {
             try {
                 const id = req.params.id;
@@ -1025,8 +1028,8 @@ async function run() {
         // delete Own comment api
         app.patch('/api/forum-posts/comment/delete/:id', async (req, res) => {
             try {
-                const id = req.params.id
-                const { commentId, userEmail } = req.body
+                const id = req.params.id;
+                const { commentId, userEmail } = req.body;
 
                 if (!ObjectId.isValid(id) || !ObjectId.isValid(commentId)) {
                     return res.status(400).send({
@@ -1034,45 +1037,41 @@ async function run() {
                         message: 'Invalid ID Format'
                     });
                 }
+
                 const result = await forumPostCollection.updateOne(
-                    {
-                        _id: new ObjectId(id),
-                        "comments.commentId": new ObjectId(commentId),
-                        "comments.userEmail": userEmail
-                    },
+                    { _id: new ObjectId(id) },
                     {
                         $pull: {
                             comments: {
                                 commentId: new ObjectId(commentId),
-                                userEmail: userEmail
+                                userEmail: { $regex: new RegExp(`^${userEmail}$`, 'i') }
                             }
                         }
                     }
-                )
+                );
 
                 if (result.modifiedCount > 0) {
-                    res.status(200).send({
+                    return res.status(200).send({
                         success: true,
                         message: "Comment Deleted Successfully",
                         deleteCount: result.modifiedCount
-                    })
+                    });
                 } else {
                     return res.status(403).send({
                         success: false,
-                        message: 'Unauthorized! You can only delete your own comment'
-                    })
+                        message: 'Unauthorized Comment not found!'
+                    });
                 }
 
             } catch (error) {
-                console.error('Delete Own comment api Error', error)
+                console.error('Delete Own comment api Error', error);
                 res.status(500).send({
                     success: false,
                     message: 'Internal Server Error! Something Wrong!',
                     error: error.message,
-                })
+                });
             }
-        })
-
+        });
 
         /**** Favorite Add OR Remove API Section *****/
 
@@ -1305,6 +1304,77 @@ async function run() {
                     message: 'Internal Server Error',
                     error: error.message
                 });
+            }
+        });
+
+        /******PAYMENT API******/
+
+        // booked check api
+        app.get('/api/bookings/check', async (req, res) => {
+            try {
+                const { email, classId } = req.query;
+
+                if (!email || !classId) {
+                    return res.status(400).json({
+                        success: false,
+                        message: "Email and classId are required"
+                    });
+                }
+
+                const isBooked = await bookingsCollection.findOne({
+                    userEmail: email,
+                    classId: classId
+                });
+
+                if (isBooked) {
+                    return res.json({
+                        success: true,
+                        booked: true
+                    });
+                } else {
+                    return res.json({
+                        success: true,
+                        booked: false
+                    });
+                }
+            } catch (error) {
+                res.status(500).json({
+                    success: false,
+                    message: error.message
+                });
+            }
+        });
+
+        app.post('/api/bookings/save', async (req, res) => {
+            try {
+                const { sessionId, classId, userEmail } = req.body;
+
+                if (!sessionId || !classId || !userEmail) {
+                    return res.status(400).json({ success: false, message: "Missing fields" });
+                }
+
+                const existing = await bookingsCollection.findOne({ sessionId });
+                if (existing) {
+                    return res.status(400).json({ success: false, message: "Already recorded" });
+                }
+
+                const newBooking = {
+                    sessionId,
+                    classId,
+                    userEmail,
+                    paymentStatus: 'paid',
+                    bookedAt: new Date()
+                };
+                await bookingsCollection.insertOne(newBooking);
+
+                await classesCollection.updateOne(
+                    { _id: new ObjectId(classId) },
+                    { $inc: { bookingCount: 1 } }
+                );
+
+                res.status(201).json({ success: true, message: "Booking saved!" });
+            } catch (error) {
+                res.status(500).json({ success: false, message: error.message });
             }
         });
 
