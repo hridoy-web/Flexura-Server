@@ -1199,6 +1199,107 @@ async function run() {
 
         /**** USER DASHBOARD API *****/
 
+        // user overview api
+        app.get('/user-overview', async (req, res) => {
+            try {
+                const email = req.query.email;
+
+                if (!email) {
+                    return res.status(400).send({
+                        message: 'Email is required'
+                    });
+                }
+
+                const user = await usersCollection.findOne({ email: email });
+
+                if (!user) {
+                    return res.status(404).send({
+                        message: 'User not found'
+                    });
+                }
+
+                const totalBooked = await bookingsCollection.countDocuments({ userEmail: email });
+
+                const totalFavorites = await favoritesCollection.countDocuments({ userEmail: email });
+
+                res.status(200).send({
+                    stats: {
+                        totalBooked,
+                        totalFavorites
+                    },
+                    profile: {
+                        name: user.name,
+                        email: user.email,
+                        image: user.image,
+                        role: user.role || 'user'
+                    },
+                    trainerApplication: {
+                        status: user.trainerStatus || 'none',
+                        feedback: user.adminFeedback || null
+                    }
+                });
+
+            } catch (error) {
+                res.status(500).send({
+                    message: 'Internal server error',
+                    error: error.message
+                });
+            }
+        });
+
+        // user booked classes list api
+        app.get('/booked-classes', async (req, res) => {
+            try {
+                const email = req.query.email;
+                if (!email) {
+                    return res.status(400).send({
+                        message: 'Email is required'
+                    });
+                }
+
+                const userBookings = await bookingsCollection.find({ userEmail: email }).sort({ bookedAt: -1 }).toArray();
+
+                if (userBookings.length === 0) {
+                    return res.send([]);
+                }
+
+                const detailedBookings = [];
+
+                for (const booking of userBookings) {
+                    let query = {};
+                    if (ObjectId.isValid(booking.classId)) {
+                        query = { _id: new ObjectId(booking.classId) };
+                    } else {
+                        query = { _id: booking.classId };
+                    }
+
+                    const originalClass = await classesCollection.findOne(query);
+
+                    detailedBookings.push({
+                        bookingId: booking._id,
+                        classId: booking.classId,
+                        className: booking.className || (originalClass ? originalClass.className : 'N/A'),
+                        image: booking.image || (originalClass ? originalClass.image : ''),
+                        category: booking.category || (originalClass ? originalClass.category : 'Fitness Focus'),
+                        trainerName: originalClass ? originalClass.trainerName : 'Expert Trainer',
+                        trainerEmail: originalClass ? originalClass.trainerEmail : '',
+                        scheduleDays: originalClass ? originalClass.scheduleDays : [],
+                        time: originalClass ? originalClass.time : 'Flexible',
+                        price: originalClass ? originalClass.price : 0,
+                        bookingDate: booking.bookedAt
+                    });
+                }
+
+                res.status(200).send(detailedBookings);
+
+            } catch (error) {
+                res.status(500).send({
+                    message: 'Internal server error',
+                    error: error.message
+                });
+            }
+        })
+
         // User Dashboard -  GET All favorites list
         app.get('/api/favorites/:email', async (req, res) => {
             try {
@@ -1306,6 +1407,10 @@ async function run() {
                 });
             }
         });
+
+
+
+
 
         /******PAYMENT API******/
 
