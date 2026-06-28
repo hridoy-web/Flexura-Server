@@ -136,58 +136,53 @@ async function run() {
 
         /****** ADMIN DASHBOARD API SECTION ******/
 
-        // Admin Dashboard - Overview Stats API
+        // 1. Admin Dashboard - Overview Stats API 
         app.get('/api/admin/dashboard/overview-stats', async (req, res) => {
             try {
-
-                const totalUsers = await usersCollection.countDocuments();
-                const approvedClasses = await classesCollection.countDocuments({ status: 'approved' })
-                const totalTransactions = await bookingsCollection.countDocuments({ status: 'paid' })
+                const totalUsers = await usersCollection.countDocuments()
+                const totalClasses = await classesCollection.countDocuments()
+                const totalBookedClasses = await bookingsCollection.countDocuments()
 
                 res.status(200).send({
                     success: true,
                     message: 'Admin overview stats fetched successfully',
                     data: {
                         totalUsers,
-                        approvedClasses,
-                        totalTransactions,
+                        totalClasses,
+                        totalBookedClasses,
                     }
                 })
 
             } catch (error) {
-                console.error('Admin Overview Stats API Error:', error)
+                console.error('Admin Overview Stats API Error:', error);
                 res.status(500).send({
-                    success: false,
-                    message: 'Internal Server Error! Something Wrong!',
-                    error: error.message,
-                })
+                    success: false, message: 'Internal Server Error!',
+                    error: error.message
+                });
             }
-        })
+        });
 
-        // Admin Dashboard - GET All Registered Users List API
+        // 2. Admin Dashboard - GET All Registered Users List API
         app.get('/api/admin/users', async (req, res) => {
             try {
-
                 const allUsers = await usersCollection.find().toArray();
 
                 res.status(200).send({
                     success: true,
                     message: 'All users data fetched successfully',
                     data: allUsers,
-                })
+                });
 
             } catch (error) {
-                console.error('Admin Dashboard All Users GET API Error', error)
-
+                console.error('Admin Dashboard All Users GET API Error', error);
                 res.status(500).send({
-                    success: false,
-                    message: 'Internal Server Error! Something Wrong!',
-                    error: error.message,
-                })
+                    success: false, message: 'Internal Server Error!',
+                    error: error.message
+                });
             }
-        })
+        });
 
-        //  Admin dasboard - Users Actions Block/unblock/Admin API
+        // 3. Admin Dashboard - Users Actions Block/unblock/ API
         app.patch('/api/admin/users/action/:id', async (req, res) => {
             try {
                 const id = req.params.id;
@@ -197,64 +192,70 @@ async function run() {
                     return res.status(400).send({
                         success: false,
                         message: 'Invalid Users ID'
-                    })
+                    });
                 }
 
                 let setUsersAction = {};
                 let successMessage = '';
 
                 if (actionType === 'block') {
-                    setUsersAction = { $set: { status: 'blocked' } }
-                    successMessage = 'User has been blocked successfully'
+                    setUsersAction = { $set: { status: 'blocked' } };
+                    successMessage = 'User has been blocked successfully';
                 } else if (actionType === 'unblock') {
-                    setUsersAction = { $set: { status: 'active' } }
-                    successMessage = 'User has been unblocked successfully'
+                    setUsersAction = { $set: { status: 'active' } };
+                    successMessage = 'User has been unblocked successfully';
                 } else if (actionType === 'makeAdmin') {
-                    setUsersAction = { $set: { role: 'admin' } }
-                    successMessage = 'User has been promoted to admin'
+                    setUsersAction = { $set: { role: 'admin' } };
+                    successMessage = 'User has been promoted to admin';
                 } else {
                     return res.status(400).send({
                         success: false,
                         message: 'Invalid Action Type!'
-                    })
+                    });
                 }
 
-                const result = await usersCollection.updateOne({ _id: new ObjectId(id) }, setUsersAction)
+                const result = await usersCollection.updateOne({ _id: new ObjectId(id) }, setUsersAction);
 
                 if (!result.matchedCount) {
                     return res.status(404).send({
                         success: false,
-                        message: 'user not found'
-                    })
-                }
-
-                if (!result.modifiedCount) {
-                    return res.status(200).send({
-                        success: true,
-                        message: 'No changes needed'
-                    })
+                        message: 'User not found'
+                    });
                 }
 
                 res.status(200).send({
                     success: true,
                     message: successMessage,
                     data: result
-                })
+                });
 
             } catch (error) {
-                console.error('Admin Dashboard - User Action API Error', error)
+                console.error('Admin Dashboard - User Action API Error', error);
                 res.status(500).send({
                     success: false,
-                    message: 'Internal Server Error! Something Wrong!',
-                    error: error.message,
-                })
+                    message: 'Internal Server Error!',
+                    error: error.message
+                });
             }
-        })
+        });
 
-        // Admin dasboard - Get All Pending Trainer Applications
+        const verifyNotBlocked = async (req, res, next) => {
+            const email = req.body.userEmail || req.query.email || req.body.authorEmail;
+            if (!email) return next();
+
+            const user = await usersCollection.findOne({ email: email });
+            if (user && user.status === 'blocked') {
+                return res.status(403).send({
+                    success: false,
+                    message: 'Action restricted by Admin'
+                });
+            }
+            next();
+        };
+
+        // 4. Admin Dashboard - Get All Pending Trainer Applications
         app.get('/api/admin/trainer-applications', async (req, res) => {
             try {
-
                 const applications = await usersCollection.find({ trainerStatus: 'pending' }).toArray()
 
                 res.status(200).send({
@@ -264,28 +265,23 @@ async function run() {
                 })
 
             } catch (error) {
-                console.error('Admin Dashboard - Trainer application GET API Error', error)
-
+                console.error('Admin Dashboard - Trainer application GET API Error', error);
                 res.status(500).send({
                     success: false,
-                    message: 'Internal Server Error! Something Wrong!',
-                    error: error.message,
-                })
+                    message: 'Internal Server Error!',
+                    error: error.message
+                });
             }
+        });
 
-        })
-
-        // Admin dasboard - Trainer Application (Approve / Reject with Feedback)
+        // 5. Admin Dashboard - Trainer Application (Approve / Reject with Feedback)
         app.patch('/api/admin/trainer-applications/action/:id', async (req, res) => {
             try {
                 const id = req.params.id;
                 const { status, feedback } = req.body;
 
                 if (!ObjectId.isValid(id)) {
-                    return res.status(400).send({
-                        success: false,
-                        message: 'Invalid Id'
-                    })
+                    return res.status(400).send({ success: false, message: 'Invalid Id' });
                 }
 
                 let updateDoc = {};
@@ -294,25 +290,25 @@ async function run() {
                         $set: {
                             role: 'trainer',
                             trainerStatus: 'approved',
-                            feedback: feedback || ''
+                            adminFeedback: feedback || ''
                         }
-                    }
+                    };
                 } else if (status === 'rejected') {
                     updateDoc = {
                         $set: {
                             role: 'user',
                             trainerStatus: 'rejected',
-                            feedback: feedback
+                            adminFeedback: feedback
                         }
-                    }
+                    };
                 } else {
                     return res.status(400).send({
                         success: false,
                         message: 'Invalid Status'
-                    })
+                    });
                 }
 
-                const result = await usersCollection.updateOne({ _id: new ObjectId(id) }, updateDoc)
+                const result = await usersCollection.updateOne({ _id: new ObjectId(id) }, updateDoc);
 
                 res.status(200).send({
                     success: true,
@@ -321,53 +317,46 @@ async function run() {
                 })
 
             } catch (error) {
-                console.error('Admin Dashboard - Trainer Application Action PATCH API Error:', error)
-
-                res.status(500).send({
-                    success: false,
-                    message: 'Internal Server Error! Something Wrong!',
-                    error: error.message,
-                })
+                console.error('Admin Dashboard - Trainer Application Action PATCH API Error:', error);
+                res.status(500).send({ success: false, message: 'Internal Server Error!', error: error.message });
             }
-        })
+        });
 
-        // Admin Dashboard - Get All Active Trainers
+        // 6. Admin Dashboard - Get All Active Trainers
         app.get('/api/admin/active/trainers', async (req, res) => {
             try {
-                const trainerList = await usersCollection.find({ role: 'trainer' }).toArray()
-
+                const trainerList = await usersCollection.find({ role: 'trainer' }).toArray();
                 res.status(200).send({
                     success: true,
                     message: 'All active trainers data fetched successfully',
-                    data: trainerList,
-                })
+                    data: trainerList
+                });
 
             } catch (error) {
-                console.error('Admin Dashboard - GET Active Trainers API Error', error)
-
+                console.error('Admin Dashboard - GET Active Trainers API Error', error);
                 res.status(500).send({
                     success: false,
-                    message: 'Internal Server Error! Something Wrong!',
-                    error: error.message,
-                })
+                    message: 'Internal Server Error!',
+                    error: error.message
+                });
             }
-        })
+        });
 
-        // Admin Dashboard - Demote Trainer to Normal User API
+        // 7. Admin Dashboard - Demote Trainer to Normal User API
         app.patch('/api/admin/trainers/demote/:id', async (req, res) => {
             try {
-                const id = req.params.id
-
+                const id = req.params.id;
                 if (!ObjectId.isValid(id)) {
                     return res.status(400).send({
                         success: false,
                         message: 'Invalid Id'
-                    })
+                    });
                 }
 
-                const result = await usersCollection.updateOne({ _id: new ObjectId(id) },
+                const result = await usersCollection.updateOne(
+                    { _id: new ObjectId(id) },
                     { $set: { role: 'user', trainerStatus: 'demoted' } }
-                )
+                );
 
                 res.status(200).send({
                     success: true,
@@ -379,98 +368,144 @@ async function run() {
                 console.error('Admin Dashboard - Demote Trainer API Error', error)
                 res.status(500).send({
                     success: false,
-                    message: 'Internal Server Error! Something Wrong!',
-                    error: error.message,
-                })
+                    message: 'Internal Server Error!',
+                    error: error.message
+                });
             }
-        })
+        });
 
-        // Admin Dashboard - Get All Submitted Trainer Classes
+        // 8. Admin Dashboard - Get All Submitted Trainer Classes
         app.get('/api/admin/trainer-classes', async (req, res) => {
             try {
-                const classes = await classesCollection.find().toArray()
+                const classes = await classesCollection.find().sort({ createdAt: -1 }).toArray()
 
                 res.status(200).send({
                     success: true,
                     message: 'All trainer Class fetched successful',
-                    data: classes,
+                    data: classes
                 })
 
             } catch (error) {
-                console.error('Admin Dashboard - All Trainer Classes GET API Error', error)
-
+                console.error('Admin Dashboard - All Trainer Classes GET API Error', error);
                 res.status(500).send({
                     success: false,
-                    message: 'Internal Server Error! Something Wrong!',
-                    error: error.message,
+                    message: 'Internal Server Error!',
+                    error: error.message
                 })
             }
-        })
+        });
 
-        // Admin Dashboard - Trainer Classes Reject or approve
+        // 9. Admin Dashboard - Trainer Classes Reject or Approve
         app.patch('/api/admin/classes/status/:id', async (req, res) => {
             try {
-                const id = req.params.id
-                const { status } = req.body
+                const id = req.params.id;
+                const { status } = req.body;
 
                 if (!ObjectId.isValid(id)) {
                     return res.status(400).send({
                         success: false,
                         message: 'Invalid Class ID Format'
-                    })
+                    });
                 }
 
                 if (!status) {
                     return res.status(400).send({
                         success: false,
-                        message: 'Status fields is required'
+                        message: 'Status field is required'
                     });
                 }
 
                 const result = await classesCollection.updateOne(
                     { _id: new ObjectId(id) },
                     { $set: { status: status } }
-                )
+                );
 
                 res.status(200).send({
                     success: true,
                     message: `Class is now ${status}`,
-                    data: {
-                        id,
-                        status,
-                        modifiedCount: result.modifiedCount
-                    }
-                })
+                    data: { id, status, modifiedCount: result.modifiedCount }
+                });
 
             } catch (error) {
-                console.error('Admin Dashboard - Class Status Update PATCH API Error', error)
+                console.error('Admin Dashboard - Class Status Update PATCH API Error', error);
                 res.status(500).send({
                     success: false,
-                    message: 'Internal Server Error! Something Wrong!',
-                    error: error.message,
-                })
+                    message: 'Internal Server Error!',
+                    error: error.message
+                });
             }
-        })
+        });
 
-        // Admin Dashboard - Get all forum Post
+        // 10. Admin Dashboard - Get All Forum Posts
         app.get('/api/admin/find/all-forum-posts', async (req, res) => {
             try {
-                const result = await forumPostCollection.find().sort({ createdAt: -1 }).toArray()
+                const result = await forumPostCollection.find().sort({ createdAt: -1 }).toArray();
 
                 res.status(200).send({
                     success: true,
                     message: 'All forum post fetched successfully',
                     data: result
                 })
+
             } catch (error) {
-                console.error('Admin Dashboard - Get all forum Post Api Error', error)
+                console.error('Admin Dashboard - Get all forum Post Api Error', error);
                 res.status(500).send({
                     success: false,
-                    message: 'Internal Server Error! Something Wrong!',
-                    error: error.message,
-                })
+                    message: 'Internal Server Error!',
+                    error: error.message
+                });
             }
-        })
+        });
+
+        // 11. Transactions Page API (Database Collection Connection Fixed)
+        app.get('/api/admin/transactions', async (req, res) => {
+            try {
+                const bookings = await db.collection('bookings').find({ paymentStatus: 'paid' }).toArray();
+
+                if (!bookings || bookings.length === 0) {
+                    return res.status(200).send({
+                        success: true,
+                        totalRevenue: 0,
+                        payments: []
+                    });
+                }
+
+                const payments = [];
+                let totalRevenue = 0;
+
+                bookings.forEach(booking => {
+
+                    const currentPrice = booking.price ? Number(booking.price) : 0;
+
+                    payments.push({
+                        _id: booking._id,
+                        userEmail: booking.userEmail || 'unknown@user.com',
+                        price: currentPrice,
+                        transactionId: booking.sessionId || 'N/A',
+                        bookedAt: booking.bookedAt || new Date().toISOString()
+                    });
+
+                    totalRevenue += currentPrice;
+                });
+
+                console.log(`Server final balance calculated - Total: ${totalRevenue}, Payments count: ${payments.length}`);
+
+                res.status(200).send({
+                    success: true,
+                    totalRevenue,
+                    payments
+                });
+
+            } catch (error) {
+                console.error('Admin Dashboard - Transactions API Error', error);
+
+                res.status(500).send({
+                    success: false,
+                    message: 'Internal Server Error!',
+                    error: error.message
+                });
+            }
+        });
 
 
 
@@ -1306,7 +1341,7 @@ async function run() {
                 const email = req.params.email
 
                 const query = { userEmail: email }
-                const result = await favoritesCollection.find(query).toArray()
+                const result = await favoritesCollection.find(query).sort({ addedAt: -1 }).toArray()
 
                 res.status(200).send({
                     success: true,
@@ -1450,26 +1485,36 @@ async function run() {
             }
         });
 
+        // payment save to database
         app.post('/api/bookings/save', async (req, res) => {
             try {
-                const { sessionId, classId, userEmail } = req.body;
+
+                const { sessionId, classId, userEmail, price } = req.body;
 
                 if (!sessionId || !classId || !userEmail) {
-                    return res.status(400).json({ success: false, message: "Missing fields" });
+                    return res.status(400).json({
+                        success: false,
+                        message: "Missing fields"
+                    });
                 }
 
                 const existing = await bookingsCollection.findOne({ sessionId });
                 if (existing) {
-                    return res.status(400).json({ success: false, message: "Already recorded" });
+                    return res.status(400).json({
+                        success: false,
+                        message: "Already recorded"
+                    });
                 }
 
                 const newBooking = {
                     sessionId,
                     classId,
                     userEmail,
+                    price: price ? Number(price) : 0,
                     paymentStatus: 'paid',
                     bookedAt: new Date()
                 };
+
                 await bookingsCollection.insertOne(newBooking);
 
                 await classesCollection.updateOne(
@@ -1477,12 +1522,17 @@ async function run() {
                     { $inc: { bookingCount: 1 } }
                 );
 
-                res.status(201).json({ success: true, message: "Booking saved!" });
+                res.status(201).json({
+                    success: true,
+                    message: "Booking saved!"
+                });
             } catch (error) {
-                res.status(500).json({ success: false, message: error.message });
+                res.status(500).json({
+                    success: false,
+                    message: error.message
+                });
             }
         });
-
 
 
 
