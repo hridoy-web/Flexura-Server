@@ -1499,9 +1499,10 @@ async function run() {
                 }
 
                 const existing = await bookingsCollection.findOne({ sessionId });
+
                 if (existing) {
-                    return res.status(400).json({
-                        success: false,
+                    return res.status(200).json({
+                        success: true,
                         message: "Already recorded"
                     });
                 }
